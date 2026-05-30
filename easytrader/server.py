@@ -132,6 +132,28 @@ def post_sell():
     return jsonify(res), 201
 
 
+@app.route("/market_buy", methods=["POST"])
+@error_handle
+def post_market_buy():
+    json_data = request.get_json(force=True)
+
+    user = global_store["user"]
+    res = user.market_buy(**json_data)
+
+    return jsonify(res), 201
+
+
+@app.route("/market_sell", methods=["POST"])
+@error_handle
+def post_market_sell():
+    json_data = request.get_json(force=True)
+
+    user = global_store["user"]
+    res = user.market_sell(**json_data)
+
+    return jsonify(res), 201
+
+
 @app.route("/cancel_entrust", methods=["POST"])
 @error_handle
 def post_cancel_entrust():
