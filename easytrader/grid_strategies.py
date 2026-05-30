@@ -2,6 +2,7 @@
 import abc
 import io
 import tempfile
+import os
 from io import StringIO
 from typing import TYPE_CHECKING, Dict, List, Optional
 
@@ -188,15 +189,16 @@ class Xls(BaseStrategy):
             self._trader.wait(0.2)
             count -= 1
 
-        temp_path = tempfile.mkstemp(suffix=".xls", dir=self.tmp_folder)[1]
+        fd, temp_path = tempfile.mkstemp(suffix=".xls", dir=self.tmp_folder)
+        os.close(fd)
         self._set_foreground(self._trader.app.top_window())
 
         # alt+s保存，alt+y替换已存在的文件
         self._trader.app.top_window().Edit1.set_edit_text(temp_path)
         self._trader.wait(0.1)
-        self._trader.app.top_window().type_keys("%{s}%{y}", set_foreground=False)
+        self._trader.app.top_window().type_keys("%{s}%{y}", set_foreground=True)
         # Wait until file save complete otherwise pandas can not find file
-        self._trader.wait(0.2)
+        self._trader.wait(1.2)
         if self._trader.is_exist_pop_dialog():
             self._trader.app.top_window().Button2.click()
             self._trader.wait(0.2)
@@ -213,4 +215,5 @@ class Xls(BaseStrategy):
             dtype=self._trader.config.GRID_DTYPE,
             na_filter=False,
         )
+        os.remove(data)
         return df.to_dict("records")
