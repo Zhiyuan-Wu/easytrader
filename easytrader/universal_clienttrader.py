@@ -23,7 +23,7 @@ class UniversalClientTrader(clienttrader.BaseLoginClientTrader):
         :param kwargs:
         :return:
         """
-        self._editor_need_type_keys = False
+        self._editor_need_type_keys = True
 
         try:
             self._app = pywinauto.Application().connect(
