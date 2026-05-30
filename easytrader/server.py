@@ -73,6 +73,12 @@ def post_prepare():
     if "broker" not in json_data:
         return jsonify({"error": "缺少必要参数: broker"}), 422
 
+    # 服务端环境变量预设默认值，客户端参数优先
+    if "exe_path" not in json_data and os.environ.get("EXE_PATH", "").strip():
+        json_data["exe_path"] = os.environ["EXE_PATH"]
+    if "comm_password" not in json_data and os.environ.get("COMM_PASSWORD", "").strip():
+        json_data["comm_password"] = os.environ["COMM_PASSWORD"]
+
     user = api.use(json_data.pop("broker"))
     user.prepare(**json_data)
 

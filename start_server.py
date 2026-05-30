@@ -3,11 +3,11 @@
 
 用法:
     1. 复制配置文件:  cp .env.example .env
-    2. 编辑 .env 填入 API Key
+    2. 编辑 .env 填入 API Key 和服务端默认参数
     3. 启动服务:      python start_server.py
 
 服务启动后仅监听端口，不会自动登录券商客户端。
-需由客户端调用 POST /prepare 传入券商类型和登录参数后才能执行交易。
+需由客户端调用 POST /prepare 传入券商类型和登录凭据后才能执行交易。
 
 配置通过 .env 文件读取，也可通过同名环境变量覆盖。
 """
@@ -45,6 +45,8 @@ def main():
     print("启动 EasyTrader 远程交易服务")
     print(f"  端口: {port}")
     print(f"  API Key: {'已配置' if api_key else '未配置 (无认证保护)'}")
+    if os.environ.get("EXE_PATH", "").strip():
+        print(f"  默认客户端路径: {os.environ['EXE_PATH']}")
     print()
     print("服务启动后，请由客户端调用 POST /prepare 登录券商客户端")
     print()
