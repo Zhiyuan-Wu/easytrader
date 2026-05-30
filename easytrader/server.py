@@ -9,7 +9,16 @@ from .log import logger
 
 app = Flask(__name__)
 
+# 配置 Flask 的 JSON 编码器
+app.config['JSON_AS_ASCII'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
 global_store = {}
+
+# 确保启动时客户端处于打开状态，dummy prepare，且76行跳过准备
+user = api.use('universal_client')
+user.prepare(user="1", password="1", exe_path=r"C:\同花顺软件\同花顺\xiadan.exe")
+global_store["user"] = user
 
 # API Key authentication
 _api_key = os.environ.get("EASYTRADER_API_KEY", "")
@@ -68,6 +77,9 @@ def error_handle(func):
 @app.route("/prepare", methods=["POST"])
 @error_handle
 def post_prepare():
+    if "user" in global_store:
+        return jsonify({"msg": "login success"}), 201
+    
     json_data = request.get_json(force=True)
 
     if "broker" not in json_data:
