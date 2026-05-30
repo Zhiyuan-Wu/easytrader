@@ -4,6 +4,7 @@ import os
 from flask import Flask, jsonify, request
 
 from . import api
+from . import exceptions
 from .log import logger
 
 app = Flask(__name__)
@@ -31,16 +32,35 @@ def _auth_middleware():
     return _check_api_key()
 
 
+def _get_user():
+    """Get the logged-in trader instance. Returns (user, None) or (None, error_response)."""
+    user = global_store.get("user")
+    if user is None:
+        return None, (jsonify({"error": "请先调用 POST /prepare 登录券商客户端"}), 403)
+    return user, None
+
+
 def error_handle(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        # pylint: disable=broad-except
+        except exceptions.TradeError as e:
+            logger.warning("trade error: %s", e)
+            return jsonify({"error": str(e)}), 409
+        except KeyError as e:
+            logger.warning("missing parameter: %s", e)
+            return jsonify({"error": "缺少必要参数: {}".format(e)}), 422
+        except (TypeError, ValueError) as e:
+            logger.warning("invalid parameter: %s", e)
+            return jsonify({"error": "参数错误: {}".format(e)}), 422
+        except NotImplementedError as e:
+            logger.warning("not implemented: %s", e)
+            return jsonify({"error": "不支持的券商类型或操作"}), 400
         except Exception as e:
             logger.exception("server error")
-            message = "{}: {}".format(e.__class__, e)
-            return jsonify({"error": message}), 400
+            message = "{}: {}".format(e.__class__.__name__, e)
+            return jsonify({"error": message}), 500
 
     return wrapper
 
@@ -49,6 +69,9 @@ def error_handle(func):
 @error_handle
 def post_prepare():
     json_data = request.get_json(force=True)
+
+    if "broker" not in json_data:
+        return jsonify({"error": "缺少必要参数: broker"}), 422
 
     user = api.use(json_data.pop("broker"))
     user.prepare(**json_data)
@@ -60,118 +83,126 @@ def post_prepare():
 @app.route("/balance", methods=["GET"])
 @error_handle
 def get_balance():
-    user = global_store["user"]
-    balance = user.balance
-
-    return jsonify(balance), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.balance), 200
 
 
 @app.route("/position", methods=["GET"])
 @error_handle
 def get_position():
-    user = global_store["user"]
-    position = user.position
-
-    return jsonify(position), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.position), 200
 
 
 @app.route("/auto_ipo", methods=["GET"])
 @error_handle
 def get_auto_ipo():
-    user = global_store["user"]
-    res = user.auto_ipo()
-
-    return jsonify(res), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.auto_ipo()), 200
 
 
 @app.route("/today_entrusts", methods=["GET"])
 @error_handle
 def get_today_entrusts():
-    user = global_store["user"]
-    today_entrusts = user.today_entrusts
-
-    return jsonify(today_entrusts), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.today_entrusts), 200
 
 
 @app.route("/today_trades", methods=["GET"])
 @error_handle
 def get_today_trades():
-    user = global_store["user"]
-    today_trades = user.today_trades
-
-    return jsonify(today_trades), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.today_trades), 200
 
 
 @app.route("/cancel_entrusts", methods=["GET"])
 @error_handle
 def get_cancel_entrusts():
-    user = global_store["user"]
-    cancel_entrusts = user.cancel_entrusts
-
-    return jsonify(cancel_entrusts), 200
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.cancel_entrusts), 200
 
 
 @app.route("/buy", methods=["POST"])
 @error_handle
 def post_buy():
     json_data = request.get_json(force=True)
-    user = global_store["user"]
-    res = user.buy(**json_data)
-
-    return jsonify(res), 201
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.buy(**json_data)), 201
 
 
 @app.route("/sell", methods=["POST"])
 @error_handle
 def post_sell():
     json_data = request.get_json(force=True)
-
-    user = global_store["user"]
-    res = user.sell(**json_data)
-
-    return jsonify(res), 201
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.sell(**json_data)), 201
 
 
 @app.route("/market_buy", methods=["POST"])
 @error_handle
 def post_market_buy():
     json_data = request.get_json(force=True)
-
-    user = global_store["user"]
-    res = user.market_buy(**json_data)
-
-    return jsonify(res), 201
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.market_buy(**json_data)), 201
 
 
 @app.route("/market_sell", methods=["POST"])
 @error_handle
 def post_market_sell():
     json_data = request.get_json(force=True)
-
-    user = global_store["user"]
-    res = user.market_sell(**json_data)
-
-    return jsonify(res), 201
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.market_sell(**json_data)), 201
 
 
 @app.route("/cancel_entrust", methods=["POST"])
 @error_handle
 def post_cancel_entrust():
     json_data = request.get_json(force=True)
-
-    user = global_store["user"]
-    res = user.cancel_entrust(**json_data)
-
-    return jsonify(res), 201
+    user, err = _get_user()
+    if err:
+        return err
+    return jsonify(user.cancel_entrust(**json_data)), 201
 
 
 @app.route("/exit", methods=["GET"])
 @error_handle
 def get_exit():
-    user = global_store["user"]
+    user, err = _get_user()
+    if err:
+        return err
     user.exit()
-
+    global_store.pop("user", None)
     return jsonify({"msg": "exit success"}), 200
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "接口不存在: {}".format(request.path)}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "方法不允许: {} {}".format(request.method, request.path)}), 405
 
 
 def run(port=1430, api_key=None):
