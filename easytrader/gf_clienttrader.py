@@ -75,10 +75,13 @@ class GFClientTrader(clienttrader.BaseLoginClientTrader):
         control = self._app.top_window().window(control_id=0x5db)
         control.click()
         time.sleep(0.2)
-        file_path = tempfile.mktemp() + ".jpg"
-        control.capture_as_image().save(file_path)
-        time.sleep(0.2)
-        vcode = recognize_verify_code(file_path, "gf_client")
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            file_path = tmp.name
+        try:
+            control.capture_as_image().save(file_path)
+            time.sleep(0.2)
+            vcode = recognize_verify_code(file_path, "gf")
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         return "".join(re.findall("[a-zA-Z0-9]+", vcode))

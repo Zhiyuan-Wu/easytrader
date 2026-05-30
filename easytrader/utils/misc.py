@@ -1,6 +1,8 @@
 # coding:utf-8
 import json
 
+from easytrader.utils.crypto import PREFIX, decrypt_config, get_master_password
+
 
 def parse_cookies_str(cookies):
     """
@@ -19,7 +21,15 @@ def parse_cookies_str(cookies):
 
 def file2dict(path):
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        config = json.load(f)
+    # Auto-decrypt if any value has the enc: prefix
+    if any(
+        isinstance(v, str) and v.startswith(PREFIX)
+        for v in config.values()
+    ):
+        master_password = get_master_password()
+        config = decrypt_config(config, master_password)
+    return config
 
 
 def grep_comma(num_str):

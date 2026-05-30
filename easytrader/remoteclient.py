@@ -19,6 +19,11 @@ class RemoteClient:
         elif kwargs.get("auth"):
             self._s.auth = kwargs.get("auth")
 
+        # 支持 API Key 认证
+        self._api_key = kwargs.get("api_key", "")
+        if self._api_key:
+            self._s.headers.update({"X-API-Key": self._api_key})
+
         # 支持 ssl (有时候需要过某些反向代理要用https协议)
         self._api = f"http{'s' if kwargs.get('ssl') is True else ''}://{host}:{port}"
         self._broker = broker

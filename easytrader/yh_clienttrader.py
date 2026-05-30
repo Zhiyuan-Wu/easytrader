@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import re
 import tempfile
 
@@ -94,7 +95,8 @@ class YHClientTrader(clienttrader.BaseLoginClientTrader):
         )
         control.click()
 
-        file_path = tempfile.mktemp()
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            file_path = tmp.name
         if is_xiadan:
             rect = control.element_info.rectangle
             rect.right = round(
@@ -103,7 +105,11 @@ class YHClientTrader(clienttrader.BaseLoginClientTrader):
             control.capture_as_image(rect).save(file_path, "jpeg")
         else:
             control.capture_as_image().save(file_path, "jpeg")
-        verify_code = recognize_verify_code(file_path, "yh_client")
+        try:
+            verify_code = recognize_verify_code(file_path, "yh_client")
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         return "".join(re.findall(r"\d+", verify_code))
 
     @property

@@ -188,7 +188,7 @@ class Xls(BaseStrategy):
             self._trader.wait(0.2)
             count -= 1
 
-        temp_path = tempfile.mktemp(suffix=".xls", dir=self.tmp_folder)
+        temp_path = tempfile.mkstemp(suffix=".xls", dir=self.tmp_folder)[1]
         self._set_foreground(self._trader.app.top_window())
 
         # alt+s保存，alt+y替换已存在的文件

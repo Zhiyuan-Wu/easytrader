@@ -1,5 +1,6 @@
 site
 cmd_cache.pk
+cmd_cache.json
 bak
 .mypy_cache
 .pyre
@@ -19,6 +20,15 @@ __pycache__/
 *.py[cod]
 account.json
 account.session
+# Broker config files (contain credentials)
+*_client.json
+xq.json
+yh_client.json
+ht_client.json
+gj_client.json
+gf_client.json
+htzq_client.json
+wk_client.json
 # C extensions
 *.so
 

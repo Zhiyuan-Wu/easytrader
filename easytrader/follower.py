@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import abc
 import datetime
+import json
 import os
 import pickle
 import queue
@@ -23,7 +24,8 @@ class BaseFollower(metaclass=abc.ABCMeta):
     LOGIN_PAGE = ""
     LOGIN_API = ""
     TRANSACTION_API = ""
-    CMD_CACHE_FILE = "cmd_cache.pk"
+    CMD_CACHE_FILE = "cmd_cache.json"
+    _LEGACY_CACHE_FILE = "cmd_cache.pk"
     WEB_REFERER = ""
     WEB_ORIGIN = ""
 
@@ -126,9 +128,22 @@ class BaseFollower(metaclass=abc.ABCMeta):
         return price
 
     def load_expired_cmd_cache(self):
+        # Migrate legacy pickle cache to JSON
+        if os.path.exists(self._LEGACY_CACHE_FILE) and not os.path.exists(self.CMD_CACHE_FILE):
+            try:
+                with open(self._LEGACY_CACHE_FILE, "rb") as f:
+                    legacy_data = pickle.load(f)
+                if isinstance(legacy_data, set):
+                    with open(self.CMD_CACHE_FILE, "w", encoding="utf-8") as f:
+                        json.dump(list(legacy_data), f, ensure_ascii=False)
+                    logger.info("已将 %s 迁移为 %s", self._LEGACY_CACHE_FILE, self.CMD_CACHE_FILE)
+            except Exception as e:
+                logger.warning("迁移旧缓存文件失败: %s", e)
+
         if os.path.exists(self.CMD_CACHE_FILE):
-            with open(self.CMD_CACHE_FILE, "rb") as f:
-                self.expired_cmds = pickle.load(f)
+            with open(self.CMD_CACHE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.expired_cmds = set(data)
 
     def start_trader_thread(
         self,
@@ -236,8 +251,8 @@ class BaseFollower(metaclass=abc.ABCMeta):
         key = self.generate_expired_cmd_key(cmd)
         self.expired_cmds.add(key)
 
-        with open(self.CMD_CACHE_FILE, "wb") as f:
-            pickle.dump(self.expired_cmds, f)
+        with open(self.CMD_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(self.expired_cmds), f, ensure_ascii=False)
 
     @staticmethod
     def _is_number(s):
