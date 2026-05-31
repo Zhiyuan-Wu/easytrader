@@ -23,7 +23,7 @@ pytesseract
 python-dateutil
 python-xlib
 pytz
-pywinauto
+pywinauto==0.6.6
 requests
 six
 urllib3
